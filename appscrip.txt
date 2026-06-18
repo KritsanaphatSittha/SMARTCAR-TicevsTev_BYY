@@ -1,0 +1,66 @@
+function doPost(e) {
+  // 1. รับข้อมูลอินพุตจากหน้าเว็บ JavaScript
+  var params = JSON.parse(e.postData.contents);
+  
+  // 2. เรียกเปิดแผ่นงาน (ปรับเป็น ณ เณร ตรงตามภาพ Google Sheets ของคุณแล้ว)
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("ตารางคำนวณ");
+  
+  // ระบบดักจับข้อผิดพลาด: หากยังหาชื่อแท็บไม่เจอ จะส่งข้อความแจ้งเตือนกลับไปแทนการ Crash
+  if (!sheet) {
+    return ContentService.createTextOutput(JSON.stringify({
+      error: "ไม่พบแผ่นงานชื่อ 'ตารางคำนวณ' กรุณาตรวจสอบชื่อแท็บด้านล่างของ Google Sheets"
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+  
+  // 3. หยอดค่าลงพิกัดเซลล์จริงตามโครงสร้าง Google Sheets ของคุณ
+  sheet.getRange("D2").setValue(Number(params.distance));
+  sheet.getRange("D3").setValue(Number(params.years));
+  sheet.getRange("I2").setValue(Number(params.diesel));
+  sheet.getRange("I3").setValue(Number(params.benzine));
+  sheet.getRange("I4").setValue(Number(params.electric));
+  
+  // บังคับให้ระบบคำนวณสูตรคณิตศาสตร์ในแผ่นงานใหม่ให้เสร็จสิ้นทันที
+  SpreadsheetApp.flush();
+  
+  // 4. ดึงข้อมูลผลลัพธ์จากตารางจริง (แถวที่ 8 ถึง 21, คอลัมน์ A ถึง M)
+  var dataRange = sheet.getRange("A8:M21");
+  var values = dataRange.getValues();
+  
+  // 5. แพ็กข้อมูลแยกคอลัมน์เพื่อส่งกลับไปแสดงดีเทลบนหน้าเว็บ
+  var calculatedResults = [];
+  for (var i = 0; i < values.length; i++) {
+    var carName = values[i][0];
+    if (!carName) continue; // ข้ามแถวที่เป็นช่องว่าง
+    
+    // แยกประเภทรถเพื่อติดป้าย Badge สีบนหน้าเว็บให้ถูกต้อง
+    var carType = "เบนซิน";
+    if (carName.indexOf("ดีเซล") > -1) { carType = "ดีเซล"; }
+    else if (carName.indexOf("Mg") > -1 || carName.indexOf("BYD") > -1) { carType = "ไฟฟ้า"; }
+    
+    calculatedResults.push({
+      name: carName,             // คอลัมน์ A
+      type: carType,             // ประเภทรถ
+      consumption: values[i][1], // คอลัมน์ B (ค่าพลังงาน)
+      basePrice: values[i][2],   // คอลัมน์ C (ราคาซื้อ)
+      resalePrice: values[i][3], // คอลัมน์ D (ราคาขายต่อ)
+      tax: values[i][4],         // คอลัมน์ E (ภาษี)
+      prv: values[i][5],         // คอลัมน์ F (พรบ)
+      insurance: values[i][6],   // คอลัมน์ G (ประกันภัย)
+      tires: values[i][7],       // คอลัมน์ H (ยางรถยนต์)
+      battery: values[i][8],     // คอลัมน์ I (แบตเตอรี่)
+      evBattery: values[i][9],   // คอลัมน์ J (แบตเตอรี่ไฟฟ้า)
+      maintenance: values[i][10],// คอลัมน์ K (ค่าซ่อมบำรุง)
+      energyCost: values[i][11], // คอลัมน์ L (ค่าพลังงานรวม)
+      totalCost: values[i][12]   // คอลัมน์ M (ค่าใช้จ่ายสะสมรวมสุทธิขวาสุด)
+    });
+  }
+  
+  // 6. ส่งยอดสรุปผลกลับสู่หน้าเว็บ HTML
+  return ContentService.createTextOutput(JSON.stringify(calculatedResults))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function doGet(e) {
+  return ContentService.createTextOutput(JSON.stringify({status: "ระบบคำนวณ API พร้อมใช้งานร่วมกับหน้าเว็บแล้ว"}))
+    .setMimeType(ContentService.MimeType.JSON);
+}
