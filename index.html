@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบวิเคราะห์และคำนวณค่าใช้จ่ายรถยนต์สุทธิ</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .type-filter-container {
+            display: flex;
+            background-color: rgba(255, 255, 255, 0.15);
+            padding: 4px;
+            border-radius: 10px;
+            gap: 2px;
+        }
+
+        .type-filter-btn {
+            background: none;
+            border: none;
+            color: rgba(255, 255, 255, 0.8);
+            padding: 6px 12px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .type-filter-btn.active {
+            background-color: #ffffff;
+            color: #0076eb;
+            font-weight: 600;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .main-header {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 10px;
+            padding: 12px 14px;
+        }
+
+        .header-top-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            gap: 8px;
+        }
+
+        .filter-toggle-btn {
+            background-color: rgba(255, 255, 255, 0.15);
+            border: none;
+            color: white;
+            padding: 8px 10px;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .filter-toggle-btn span {
+            display: none;
+        }
+
+        @media (min-width: 400px) {
+            .filter-toggle-btn span {
+                display: inline;
+                margin-left: 4px;
+                font-size: 0.8rem;
+            }
+        }
+
+        .app-logo-link {
+            display: flex;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .app-logo {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 1.5px solid #ffd700;
+            box-shadow: 0 0 4px rgba(255, 215, 0, 0.3);
+        }
+
+        .header-title {
+            margin-left: auto;
+            font-size: 0.9rem !important;
+            font-weight: 500;
+            color: #ffffff;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            text-align: right;
+        }
+
+        .view-monthly-btn {
+            width: 100%;
+            background-color: #f0f7ff;
+            color: #0076eb;
+            border: 1px solid #cbdff7;
+            padding: 8px;
+            border-radius: 10px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            margin-top: 10px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+
+        .view-monthly-btn:active {
+            background-color: #e1f0ff;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header class="main-header">
+        <div class="header-top-row">
+            <button id="openDrawer" class="filter-toggle-btn">
+                <i class="fas fa-filter"></i> <span>ตั้งค่าคำนวณ</span>
+            </button>
+            <a href="https://www.facebook.com/BanyanyaoMunicipalSchool" target="_blank" rel="noopener noreferrer"
+                class="app-logo-link">
+                <img src="BYY.jpg" alt="BYY Logo" class="app-logo">
+            </a>
+            <div class="header-title">ระบบเปรียบเทียบความคุ้มค่ารถยนต์</div>
+        </div>
+        <div class="type-filter-container">
+            <button class="type-filter-btn active" data-type="all">ทั้งหมด</button>
+            <button class="type-filter-btn" data-type="oil">รถน้ำมัน</button>
+            <button class="type-filter-btn" data-type="ev">รถไฟฟ้า</button>
+        </div>
+    </header>
+
+    <div id="drawerOverlay" class="drawer-overlay"></div>
+
+    <aside id="filterDrawer" class="filter-drawer">
+        <div class="drawer-header">
+            <h2><i class="fas fa-sliders-h text-blue"></i>ตั้งค่าตัวแปรของคุณ</h2>
+            <button id="closeDrawer" class="close-drawer-btn">&times;</button>
+        </div>
+        <div class="drawer-body">
+            <div class="input-group">
+                <span class="input-label-container">ระยะทางวิ่งต่อเดือน (กิโลเมตร)</span>
+                <input type="number" id="paramDistance" class="custom-input" value="300" min="1">
+            </div>
+            <div class="input-group">
+                <span class="input-label-container">ระยะเวลาถือครองรถ (ปี)</span>
+                <input type="number" id="paramYears" class="custom-input" value="1" min="1" max="20">
+            </div>
+            <div class="input-group"
+                style="background-color: #f0f7ff; padding: 12px; border-radius: 12px; border: 1px solid #cbdff7;">
+                <span class="input-label-container" style="font-weight: 600; color: #0076eb;">รวมระยะทางทั้งหมด
+                    (กิโลเมตร)</span>
+                <div id="displayTotalDistance"
+                    style="font-size: 1.1rem; font-weight: 700; color: #0056b3; margin-top: 4px;">0 กม.</div>
+            </div>
+            <div class="input-group">
+                <span class="input-label-container">ราคาน้ำมันดีเซล (บาท/ลิตร)</span>
+                <input type="number" id="paramDiesel" class="custom-input" step="0.1" value="42.2">
+            </div>
+            <div class="input-group">
+                <span class="input-label-container">ราคาน้ำมันเบนซิน (บาท/ลิตร)</span>
+                <input type="number" id="paramBenzine" class="custom-input" step="0.1" value="44.9">
+            </div>
+            <div class="input-group">
+                <span class="input-label-container">ราคาค่าชาร์จไฟฟ้า (บาท/หน่วย)</span>
+                <input type="number" id="paramElectric" class="custom-input" step="0.1" value="4.2">
+            </div>
+        </div>
+        <div class="drawer-footer">
+            <button id="submitFilter" class="submit-btn">บันทึกและคำนวณใหม่</button>
+        </div>
+    </aside>
+
+    <main class="app-container">
+        <div class="summary-bar">
+            <div>
+                <span class="summary-title">เงื่อนไขคำนวณในปัจจุบัน</span>
+                <div id="displaySummary" class="summary-text">กำลังโหลดข้อมูล...</div>
+            </div>
+            <button id="quickEdit" class="quick-edit-link"><i class="fas fa-edit"></i> แก้ไข</button>
+        </div>
+
+        <div class="section-title-container" style="align-items: center; justify-content: space-between;">
+            <span class="section-title" id="sectionTitleText">5 อันดับรถยนต์ที่คุ้มค่าที่สุด</span>
+            <button id="openChartBtn" class="quick-edit-link"
+                style="font-size: 0.85rem; display: inline-flex; align-items: center; gap: 4px; background: #e1f0ff; padding: 6px 12px; border-radius: 8px; border: none; color: #0076eb; font-weight: 500; cursor: pointer;">
+                <i class="fas fa-chart-line"></i> ดูเป็นกราฟเปรียบเทียบ
+            </button>
+        </div>
+
+        <div id="carRenderSpace" class="car-list"></div>
+
+        <div class="more-options-container">
+            <button id="openModalBtn" class="secondary-btn">
+                <i class="fas fa-list-ul"></i> ดูเปรียบเทียบรถทั้งหมดที่มี
+            </button>
+        </div>
+    </main>
+
+    <div id="allCarsModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-table text-blue"></i> ตารางเปรียบเทียบรถทั้งหมด</h2>
+                <button id="closeModalBtn" class="close-modal-btn"
+                    style="font-size: 0.95rem; display: flex; align-items: center; gap: 6px; color: #0076eb; font-weight: 500;">
+                    <i class="fas fa-arrow-left"></i> ย้อนกลับ
+                </button>
+            </div>
+            <div class="modal-body">
+                <p class="modal-subtitle">เลือกติ๊กถูกหน้ารุ่นรถ (เลือกได้สูงสุด 3 คัน)
+                    เพื่อเปิดดูรายงานเปรียบเทียบเจาะลึก</p>
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th style="text-align: center; width: 60px;">เลือกเทียบ</th>
+                                <th style="width: 50px; text-align: center;">อันดับ</th>
+                                <th>รุ่นรถ</th>
+                                <th>ประเภท</th>
+                                <th>ค่าใช้จ่ายรวมสุทธิ</th>
+                                <th>ราคาซื้อจริงหลังหักขายต่อ</th>
+                                <th>ค่าพลังงานรวม</th>
+                                <th>ค่าใช้จ่ายคงที่</th>
+                            </tr>
+                        </thead>
+                        <tbody id="modalTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div id="compareActionBar" class="compare-action-bar">
+                <div class="action-bar-text">เลือกแล้ว <span id="compareCount" class="count-badge">0</span>/3 คัน</div>
+                <button id="startCompareBtn" class="action-bar-btn" disabled>เริ่มเปรียบเทียบมวยถูกคู่</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="chartModal" class="modal-overlay" style="z-index: 260;">
+        <div class="modal-content" style="max-width: 700px; max-height: 90vh;">
+            <div class="modal-header" style="background-color: #f0f7ff;">
+                <h2 style="color: #0076eb;"><i class="fas fa-chart-bar"></i> กราฟเปรียบเทียบค่าใช้จ่ายสะสมรายปี</h2>
+                <button id="closeChartModalBtn" class="close-modal-btn">&times;</button>
+            </div>
+            <div class="modal-body" style="padding: 20px; display: flex; flex-direction: column; min-height: 340px;">
+                <p style="font-size: 0.85rem; color: #7f8c8d; margin-bottom: 12px;">แสดงข้อมูลค่าใช้จ่ายสะสมรวมรายปี
+                    (สัดส่วนจำลองตามจำนวนปีที่ถือครอง)</p>
+                <div style="flex: 1; min-height: 280px; position: relative;">
+                    <canvas id="topCarsChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="comparisonModal" class="modal-overlay" style="z-index: 250;">
+        <div class="modal-content" style="max-width: 800px;">
+            <div class="modal-header" style="background-color: #e1f0ff;">
+                <h2 style="color: #0056b3;"><i class="fas fa-balance-scale"></i> ผลการวิเคราะห์เปรียบเทียบเจาะลึก</h2>
+                <button id="closeCompareModalBtn" class="close-modal-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="table-responsive">
+                    <table class="compare-detail-table" id="compareDetailTable"></table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="monthlyModal" class="modal-overlay" style="z-index: 300;">
+        <div class="modal-content" style="max-width: 400px; border-radius: 20px;">
+            <div class="modal-header" style="background-color: #f0f7ff;">
+                <h2 style="color: #0076eb; font-size: 1rem;"><i class="fas fa-chart-pie"></i> รายจ่ายเฉลี่ยรายเดือน</h2>
+                <button id="closeMonthlyModalBtn" class="close-modal-btn" style="font-size: 1.4rem;">&times;</button>
+            </div>
+            <div class="modal-body" id="monthlyModalBody" style="padding: 20px;">
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
